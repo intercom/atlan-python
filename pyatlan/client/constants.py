@@ -394,27 +394,85 @@ INDEX_API = "search/indexsearch"
 INDEX_SEARCH = API(INDEX_API, HTTPMethod.POST, HTTPStatus.OK, endpoint=EndPoint.ATLAS)
 WORKFLOW_INDEX_API = "workflows/indexsearch"
 WORKFLOW_INDEX_RUN_API = "runs/indexsearch"
+SCHEDULE_QUERY_WORKFLOWS_SEARCH_API = "runs/cron/scheduleQueriesBetweenDuration"
+SCHEDULE_QUERY_WORKFLOWS_MISSED_API = "runs/cron/missedScheduleQueriesBetweenDuration"
+
+SCHEDULE_QUERY_WORKFLOWS_SEARCH = API(
+    SCHEDULE_QUERY_WORKFLOWS_SEARCH_API,
+    HTTPMethod.GET,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+
+SCHEDULE_QUERY_WORKFLOWS_MISSED = API(
+    SCHEDULE_QUERY_WORKFLOWS_MISSED_API,
+    HTTPMethod.GET,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+
 WORKFLOW_INDEX_SEARCH = API(
     WORKFLOW_INDEX_API, HTTPMethod.POST, HTTPStatus.OK, endpoint=EndPoint.HERACLES
 )
 WORKFLOW_INDEX_RUN_SEARCH = API(
     WORKFLOW_INDEX_RUN_API, HTTPMethod.POST, HTTPStatus.OK, endpoint=EndPoint.HERACLES
 )
+# triggers a workflow using the current user's credentials
 WORKFLOW_RERUN_API = "workflows/submit"
 WORKFLOW_RERUN = API(
     WORKFLOW_RERUN_API, HTTPMethod.POST, HTTPStatus.OK, endpoint=EndPoint.HERACLES
 )
+
+# triggers a workflow using the workflow owner's credentials
+WORKFLOW_OWNER_RERUN_API = "workflows/triggerAsOwner"
+WORKFLOW_OWNER_RERUN = API(
+    WORKFLOW_OWNER_RERUN_API, HTTPMethod.POST, HTTPStatus.OK, endpoint=EndPoint.HERACLES
+)
+
 WORKFLOW_RUN_API = "workflows?submit=true"
 WORKFLOW_RUN = API(
     WORKFLOW_RUN_API, HTTPMethod.POST, HTTPStatus.OK, endpoint=EndPoint.HERACLES
 )
-WORKFLOW_UPDATE_API = "workflows"
+WORKFLOW_API = "workflows"
 WORKFLOW_UPDATE = API(
-    WORKFLOW_UPDATE_API + "/{workflow_name}",
+    WORKFLOW_API + "/{workflow_name}",
     HTTPMethod.POST,
     HTTPStatus.OK,
     endpoint=EndPoint.HERACLES,
 )
+WORKFLOW_ARCHIVE = API(
+    WORKFLOW_API + "/{workflow_name}/archive",
+    HTTPMethod.POST,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+WORKFLOW_SCHEDULE_RUN = "runs"
+GET_ALL_SCHEDULE_RUNS = API(
+    WORKFLOW_SCHEDULE_RUN + "/cron",
+    HTTPMethod.GET,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+GET_SCHEDULE_RUN = API(
+    WORKFLOW_SCHEDULE_RUN + "/cron/{workflow_name}",
+    HTTPMethod.GET,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+STOP_WORKFLOW_RUN = API(
+    WORKFLOW_SCHEDULE_RUN + "/{workflow_run_id}/stop",
+    HTTPMethod.POST,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+
+WORKFLOW_CHANGE_OWNER = API(
+    WORKFLOW_API + "/{workflow_name}" + "/changeownership",
+    HTTPMethod.POST,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+
 CREDENTIALS_API = "credentials"
 TEST_CREDENTIAL_API = CREDENTIALS_API + "/test"
 TEST_CREDENTIAL = API(
@@ -474,4 +532,53 @@ DELETE_TYPE_DEFS = API(
 )
 DELETE_TYPE_DEF_BY_NAME = API(
     TYPEDEF_BY_NAME, HTTPMethod.DELETE, HTTPStatus.NO_CONTENT, endpoint=EndPoint.ATLAS
+)
+
+SSO_API = "idp/"
+SSO_GROUP_MAPPER = SSO_API + "{sso_alias}/mappers"
+
+GET_SSO_GROUP_MAPPING = API(
+    SSO_GROUP_MAPPER + "/{group_map_id}",
+    HTTPMethod.GET,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+GET_ALL_SSO_GROUP_MAPPING = API(
+    SSO_GROUP_MAPPER, HTTPMethod.GET, HTTPStatus.OK, endpoint=EndPoint.HERACLES
+)
+CREATE_SSO_GROUP_MAPPING = API(
+    SSO_GROUP_MAPPER, HTTPMethod.POST, HTTPStatus.OK, endpoint=EndPoint.HERACLES
+)
+UPDATE_SSO_GROUP_MAPPING = API(
+    SSO_GROUP_MAPPER + "/{group_map_id}",
+    HTTPMethod.POST,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+DELETE_SSO_GROUP_MAPPING = API(
+    SSO_GROUP_MAPPER + "/{group_map_id}/delete",
+    HTTPMethod.POST,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+FILES_API = "files"
+PRESIGNED_URL = API(
+    FILES_API + "/presignedUrl",
+    HTTPMethod.POST,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+PRESIGNED_URL_UPLOAD = API(
+    "{presigned_url_put}",
+    HTTPMethod.PUT,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+)
+PRESIGNED_URL_DOWNLOAD = API(
+    "{presigned_url_get}",
+    HTTPMethod.GET,
+    HTTPStatus.OK,
+    endpoint=EndPoint.HERACLES,
+    consumes=EVENT_STREAM,
+    produces=EVENT_STREAM,
 )

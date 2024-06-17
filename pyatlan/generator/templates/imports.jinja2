@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import sys
 import uuid
+from json import loads
+from json.decoder import JSONDecodeError
 from datetime import datetime
 from io import StringIO
 from typing import Any, ClassVar, Dict, List, Optional, Set, Type, TypeVar, TYPE_CHECKING, cast, overload
@@ -83,6 +85,7 @@ from pyatlan.model.fields.atlan_fields import (
 from pyatlan.model.internal import AtlasServer, Internal
 from pyatlan.model.search import IndexSearchRequest
 from pyatlan.model.structs import (
+    Action,
     AuthPolicyCondition,
     AuthPolicyValiditySchedule,
     AwsTag,
@@ -103,7 +106,6 @@ from pyatlan.model.structs import (
 from pyatlan.utils import (
     init_guid,
     next_id,
-    to_camel_case,
     validate_required_fields,
     validate_single_required_field,
     get_parent_qualified_name,

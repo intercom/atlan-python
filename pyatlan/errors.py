@@ -23,11 +23,13 @@ class AtlanError(Exception):
     def __init__(self, error_code: ErrorInfo, *args):
         message = error_code.error_message.format(*args)
         super().__init__(message)
-        self.code = error_code.error_id
-        self.status_code = error_code.http_error_code
+        self.error_code = error_code
 
     def __str__(self):
-        return f"{self.code or ''} {super().__str__()}"
+        return (
+            f"{self.error_code.error_id or ''} "
+            f"{super().__str__()} Suggestion: {self.error_code.user_action}"
+        )
 
 
 class ApiConnectionError(AtlanError):
@@ -90,7 +92,7 @@ class ErrorCode(Enum):
     INVALID_REQUEST_PASSTHROUGH = (
         400,
         "ATLAN-PYTHON-400-000",
-        "Server responded with {0}: {1}",
+        "Server responded with {0}: {1}.",
         "Check the details of the server's message to correct your request.",
         InvalidRequestError,
     )
@@ -431,43 +433,43 @@ class ErrorCode(Enum):
     INVALID_PARAMETER_TYPE = (
         400,
         "ATLAN-PYTHON-400-048",
-        "Invalid parameter type for {0} should be {1}",
+        "Invalid parameter type for {0} should be {1}.",
         "Check that you have used the correct type of parameter.",
         InvalidRequestError,
     )
     GLOSSARY_MISSING_QUALIFIED_NAME = (
         400,
         "ATLAN-PYTHON-400-049",
-        "The qualified_name is not present in the Glossary",
-        "Check that the qualified_name is available from the Glossary",
+        "The qualified_name is not present in the Glossary.",
+        "Check that the qualified_name is available from the Glossary.",
         InvalidRequestError,
     )
     MISSING_OPTIONS = (
         400,
         "ATLAN-PYTHON-400-050",
-        "Options is not present in the AttributeDef",
-        "Please use the AttributeDef.create function to create the Options",
+        "Options is not present in the AttributeDef.",
+        "Please use the AttributeDef.create function to create the Options.",
         InvalidRequestError,
     )
     INVALID_PARAMETER_VALUE = (
         400,
         "ATLAN-PYTHON-400-051",
-        "{0} is an invalid value for {1} should be in {2}",
-        "Check that value you are using is valid",
+        "{0} is an invalid value for {1} should be in {2}.",
+        "Check that value you are using is valid.",
         InvalidRequestError,
     )
     ASSET_CAN_NOT_BE_ARCHIVED = (
         400,
         "ATLAN-PYTHON-400-052",
-        "Asset with guid: {0} is an asset of type {1} which does not support archiving",
-        "Please use purge if you wish to remove assets of this type",
+        "Asset with guid: {0} is an asset of type {1} which does not support archiving.",
+        "Please use purge if you wish to remove assets of this type.",
         InvalidRequestError,
     )
     METHOD_CAN_NOT_BE_INVOKED_ON_ASSET = (
         400,
         "ATLAN-PYTHON-400-053",
-        "This method cannot be invoked on the Asset class. Please invoke on a specific asset type",
-        "Please invoke this method on a sub-class of Asset",
+        "This method cannot be invoked on the Asset class. Please invoke on a specific asset type.",
+        "Please invoke this method on a sub-class of Asset.",
         InvalidRequestError,
     )
     INVALID_CREDENTIALS = (
@@ -500,10 +502,45 @@ class ErrorCode(Enum):
         + "repository providing context in which this error occurred.",
         InvalidRequestError,
     )
+    SSO_GROUP_MAPPING_ALREADY_EXISTS = (
+        400,
+        "ATLAN-PYTHON-400-058",
+        "SSO group mapping already exists between {0} (Atlan group) <-> {1} (SSO group).",
+        "You can use SSOClient.update_group_mapping() to update the existing group mapping.",
+        InvalidRequestError,
+    )
+    INVALID_UPLOAD_FILE_PATH = (
+        400,
+        "ATLAN-PYTHON-400-059",
+        "Unable to upload file, Error: {0}, Path: {1}.",
+        "Please check the provided file path for upload.",
+        InvalidRequestError,
+    )
+    UNABLE_TO_DOWNLOAD_FILE = (
+        400,
+        "ATLAN-PYTHON-400-060",
+        "Unable to download file, Error: {0}, Path: {1}.",
+        "Please check the provided download file type and path.",
+        InvalidRequestError,
+    )
+    UNSUPPORTED_PRESIGNED_URL = (
+        400,
+        "ATLAN-PYTHON-400-061",
+        "Provided presigned URL's cloud provider storage is currently not supported for file uploads.",
+        "Please raise a feature request on the Python SDK GitHub to add support for it.",
+        InvalidRequestError,
+    )
+    INVALID_CONTRACT_JSON = (
+        400,
+        "ATLAN-PYTHON-400-062",
+        "Provided data contract JSON is invalid.",
+        "Please double-check your provided data contract JSON.",
+        InvalidRequestError,
+    )
     AUTHENTICATION_PASSTHROUGH = (
         401,
         "ATLAN-PYTHON-401-000",
-        "Server responded with {0}: {1}",
+        "Server responded with {0}: {1}.",
         "Check the details of the server's message to correct your request.",
         AuthenticationError,
     )
@@ -547,7 +584,7 @@ class ErrorCode(Enum):
     PERMISSION_PASSTHROUGH = (
         403,
         "ATLAN-PYTHON-403-000",
-        "Server responded with {0}: {1}",
+        "Server responded with {0}: {1}.",
         "Check the details of the server's message to correct your request.",
         PermissionError,
     )
@@ -568,7 +605,7 @@ class ErrorCode(Enum):
     NOT_FOUND_PASSTHROUGH = (
         404,
         "ATLAN-PYTHON-404-000",
-        "Server responded with {0}: {1}",
+        "Server responded with {0}: {1}.",
         "Check the details of the server's message to correct your request.",
         NotFoundError,
     )
@@ -779,7 +816,7 @@ class ErrorCode(Enum):
     CONFLICT_PASSTHROUGH = (
         409,
         "ATLAN-PYTHON-409-000",
-        "Server responded with {0}: {1}",
+        "Server responded with {0}: {1}.",
         "Check the details of the server's message to correct your request.",
         ConflictError,
     )
@@ -795,14 +832,14 @@ class ErrorCode(Enum):
     RATE_LIMIT_PASSTHROUGH = (
         429,
         "ATLAN-PYTHON-429-000",
-        "Server responded with {0}: {1}",
+        "Server responded with {0}: {1}.",
         "Check the details of the server's message to correct your request.",
         RateLimitError,
     )
     ERROR_PASSTHROUGH = (
         500,
         "ATLAN-PYTHON-500-000",
-        "Server responded with {0}: {1}",
+        "Server responded with {0}: {1}.",
         "Check the details of the server's message to correct your request.",
         ApiError,
     )
@@ -816,7 +853,7 @@ class ErrorCode(Enum):
     UNABLE_TO_DESERIALIZE = (
         500,
         "ATLAN-PYTHON-500-002",
-        "Unable to deserialize value: {0}",
+        "Unable to deserialize value: {0}.",
         RAISE_GITHUB_ISSUE,
         LogicError,
     )

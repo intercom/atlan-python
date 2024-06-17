@@ -29,15 +29,7 @@ class LookerProject(Looker):
             return object.__setattr__(self, name, value)
         super().__setattr__(name, value)
 
-    MODELS: ClassVar[RelationField] = RelationField("models")
-    """
-    TBC
-    """
     EXPLORES: ClassVar[RelationField] = RelationField("explores")
-    """
-    TBC
-    """
-    FIELDS: ClassVar[RelationField] = RelationField("fields")
     """
     TBC
     """
@@ -45,23 +37,35 @@ class LookerProject(Looker):
     """
     TBC
     """
+    MODELS: ClassVar[RelationField] = RelationField("models")
+    """
+    TBC
+    """
+    LOOKER_PARENT_PROJECTS: ClassVar[RelationField] = RelationField(
+        "lookerParentProjects"
+    )
+    """
+    TBC
+    """
+    LOOKER_CHILD_PROJECTS: ClassVar[RelationField] = RelationField(
+        "lookerChildProjects"
+    )
+    """
+    TBC
+    """
+    FIELDS: ClassVar[RelationField] = RelationField("fields")
+    """
+    TBC
+    """
 
     _convenience_properties: ClassVar[List[str]] = [
-        "models",
         "explores",
-        "fields",
         "views",
+        "models",
+        "looker_parent_projects",
+        "looker_child_projects",
+        "fields",
     ]
-
-    @property
-    def models(self) -> Optional[List[LookerModel]]:
-        return None if self.attributes is None else self.attributes.models
-
-    @models.setter
-    def models(self, models: Optional[List[LookerModel]]):
-        if self.attributes is None:
-            self.attributes = self.Attributes()
-        self.attributes.models = models
 
     @property
     def explores(self) -> Optional[List[LookerExplore]]:
@@ -74,16 +78,6 @@ class LookerProject(Looker):
         self.attributes.explores = explores
 
     @property
-    def fields(self) -> Optional[List[LookerField]]:
-        return None if self.attributes is None else self.attributes.fields
-
-    @fields.setter
-    def fields(self, fields: Optional[List[LookerField]]):
-        if self.attributes is None:
-            self.attributes = self.Attributes()
-        self.attributes.fields = fields
-
-    @property
     def views(self) -> Optional[List[LookerView]]:
         return None if self.attributes is None else self.attributes.views
 
@@ -93,17 +87,71 @@ class LookerProject(Looker):
             self.attributes = self.Attributes()
         self.attributes.views = views
 
+    @property
+    def models(self) -> Optional[List[LookerModel]]:
+        return None if self.attributes is None else self.attributes.models
+
+    @models.setter
+    def models(self, models: Optional[List[LookerModel]]):
+        if self.attributes is None:
+            self.attributes = self.Attributes()
+        self.attributes.models = models
+
+    @property
+    def looker_parent_projects(self) -> Optional[List[LookerProject]]:
+        return (
+            None if self.attributes is None else self.attributes.looker_parent_projects
+        )
+
+    @looker_parent_projects.setter
+    def looker_parent_projects(
+        self, looker_parent_projects: Optional[List[LookerProject]]
+    ):
+        if self.attributes is None:
+            self.attributes = self.Attributes()
+        self.attributes.looker_parent_projects = looker_parent_projects
+
+    @property
+    def looker_child_projects(self) -> Optional[List[LookerProject]]:
+        return (
+            None if self.attributes is None else self.attributes.looker_child_projects
+        )
+
+    @looker_child_projects.setter
+    def looker_child_projects(
+        self, looker_child_projects: Optional[List[LookerProject]]
+    ):
+        if self.attributes is None:
+            self.attributes = self.Attributes()
+        self.attributes.looker_child_projects = looker_child_projects
+
+    @property
+    def fields(self) -> Optional[List[LookerField]]:
+        return None if self.attributes is None else self.attributes.fields
+
+    @fields.setter
+    def fields(self, fields: Optional[List[LookerField]]):
+        if self.attributes is None:
+            self.attributes = self.Attributes()
+        self.attributes.fields = fields
+
     class Attributes(Looker.Attributes):
-        models: Optional[List[LookerModel]] = Field(
-            default=None, description=""
-        )  # relationship
         explores: Optional[List[LookerExplore]] = Field(
             default=None, description=""
         )  # relationship
-        fields: Optional[List[LookerField]] = Field(
+        views: Optional[List[LookerView]] = Field(
             default=None, description=""
         )  # relationship
-        views: Optional[List[LookerView]] = Field(
+        models: Optional[List[LookerModel]] = Field(
+            default=None, description=""
+        )  # relationship
+        looker_parent_projects: Optional[List[LookerProject]] = Field(
+            default=None, description=""
+        )  # relationship
+        looker_child_projects: Optional[List[LookerProject]] = Field(
+            default=None, description=""
+        )  # relationship
+        fields: Optional[List[LookerField]] = Field(
             default=None, description=""
         )  # relationship
 

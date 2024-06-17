@@ -49,6 +49,14 @@ class Referenceable(AtlanObject):
         self.business_attributes = self._metadata_proxy.business_attributes
 
     @classmethod
+    def __get_validators__(cls):
+        yield cls._convert_to_real_type_
+
+    @classmethod
+    def _convert_to_real_type_(cls, data):
+        return Asset._convert_to_real_type_(data)
+
+    @classmethod
     def can_be_archived(self) -> bool:
         """
         Indicates if an asset can be archived via the asset.delete_by_guid method.
@@ -283,6 +291,16 @@ class Referenceable(AtlanObject):
         description=(
             "Semantic for how this relationship should be saved, "
             "if used in an asset request on which `.save()` is called."
+        ),
+    )
+    depth: Optional[int] = Field(
+        default=None,
+        description=(
+            "Depth of this asset within lineage. "
+            "Note: this will only available in assets "
+            "retrieved via lineage, and will vary even for "
+            "the same asset depending on the starting point "
+            "of the lineage requested."
         ),
     )
 

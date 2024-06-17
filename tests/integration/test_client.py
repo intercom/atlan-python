@@ -30,7 +30,6 @@ from pyatlan.model.enums import (
     CertificateStatus,
     SortOrder,
     UTMTags,
-    WorkflowPackage,
 )
 from pyatlan.model.fluent_search import FluentSearch
 from pyatlan.model.search import DSL, Bool, IndexSearchRequest, SortItem, Term
@@ -436,6 +435,34 @@ def test_add_classification(client: AtlanClient, term1: AtlasGlossaryTerm):
 
 
 @pytest.mark.order(after="test_add_classification")
+def test_include_atlan_tag_names(client: AtlanClient, term1: AtlasGlossaryTerm):
+    assert term1 and term1.qualified_name
+    query = Term.with_type_name(term1.type_name) + Term.with_name(term1.name)
+    request = IndexSearchRequest(
+        dsl=DSL(query=query), exclude_atlan_tags=True, include_atlan_tag_names=False
+    )
+    response = client.asset.search(criteria=request)
+
+    # Ensure classification names are not present
+    assert response
+    assert response.current_page() and len(response.current_page()) == 1
+    assert response.current_page()[0].guid == term1.guid
+    assert response.current_page()[0].classification_names is None
+
+    request = IndexSearchRequest(
+        dsl=DSL(query=query), exclude_atlan_tags=True, include_atlan_tag_names=True
+    )
+    response = client.asset.search(criteria=request)
+
+    # Ensure classification names are present
+    assert response
+    assert response.current_page() and len(response.current_page()) == 1
+    assert response.current_page()[0].guid == term1.guid
+    classification_names = response.current_page()[0].classification_names
+    assert classification_names and len(classification_names) == 1
+
+
+@pytest.mark.order(after="test_add_classification")
 def test_remove_classification(client: AtlanClient, term1: AtlasGlossaryTerm):
     assert term1.qualified_name
     client.asset.remove_atlan_tag(
@@ -486,6 +513,27 @@ def test_glossary_update_announcement(
     _test_update_announcement(client, glossary, AtlasGlossary, announcement)
 
 
+def test_asset_remove_certificate_by_setting_none(
+    client: AtlanClient,
+    database: Database,
+):
+    assert database
+    assert database.guid
+    assert database.certificate_status
+    assert database.certificate_status_message
+    database.certificate_status = None
+    database.certificate_status_message = None
+    response = client.asset.save(entity=[database])
+    db_updated = response.assets_updated(asset_type=Database)
+
+    assert db_updated
+    assert len(db_updated) == 1
+    assert db_updated[0].name == database.name
+    assert db_updated[0].guid == database.guid
+    assert db_updated[0].certificate_status is None
+    assert db_updated[0].certificate_status_message is None
+
+
 def test_glossary_term_update_announcement(
     client: AtlanClient,
     term1: AtlasGlossaryTerm,
@@ -525,14 +573,6 @@ def test_glossary_category_remove_announcement(
     client: AtlanClient, category: AtlasGlossaryCategory, glossary: AtlasGlossary
 ):
     _test_remove_announcement(client, category, AtlasGlossaryCategory, glossary.guid)
-
-
-def test_workflow_find_by_type(client: AtlanClient):
-    results = client.workflow.find_by_type(
-        prefix=WorkflowPackage.FIVETRAN, max_results=10
-    )
-    assert results
-    assert len(results) == 1
 
 
 def test_audit_find_by_user(

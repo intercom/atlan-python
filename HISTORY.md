@@ -1,3 +1,136 @@
+## 2.2.4 (June 11, 2024)
+
+### New features
+
+- Added the `creator()` method for `DataContract`.
+- Overloaded the `creator()` methods to explicitly handle ancestral `qualified_name` and `name`. This enhancement allows users to create objects when the ancestral asset name contains `/`, which `creator()` was previously unable to handle.
+
+### QOL improvements
+
+- Generated the latest typedef models.
+- Updated the latest set of Phosphor icons in the `AtlanIcon` enum.
+
+## 2.2.3 (June 4, 2024)
+
+### New features
+
+- Added thread lock to cache methods (`get_cache()` and `_refresh_cache()`).
+- Added support for the `Connection Delete` package.
+- Added support for custom metadata handling for data domains and products.
+
+### QOL improvements
+
+- Generated the latest typedef models (`DatabricksUnityCatalogTag`).
+- Updated `AtlanError` to include `user_action` when throwing an exception.
+
+## 2.2.2 (May 28, 2024)
+
+### New features
+
+- Added creator methods to `Kafka` and `AzureEventHub` assets.
+- Added support for `includeClassificationNames` in `IndexSearchRequest`.
+- Expanded the functionality of the `WorkflowClient` with new methods for scheduled query workflows.
+
+### Bug fixes
+
+- Fixed the `AtlasGlossaryCategory.trim_to_required()` method to use `updater()` instead of `create_for_modification()`.
+
+### QOL improvements
+
+- Generated the latest typedef models, including `Workflow` and `WorkflowRun`.
+- Updated the SSO provider in `test_sso_client.py` to check for `JUMPCLOUD` instead of `AZURE_AD`.
+- Updated the Pydantic dependency (`pydantic>=2.0.0,<3.0.0`) to provide more flexibility for users.
+
+## 2.2.1 (May 21, 2024)
+
+### New features
+
+- Added `find_domain_by_name()` and `find_product_by_name` methods to `AssetClient` to find data mesh objects by their human-readable names.
+- Modified the type of the `attributes` and `related_attributes` keyword parameters in `asset.get_hierarchy()` to accept `str` in addition to `AtlanField`.
+
+### Bug fixes
+
+- Fixed issues with data domain and data product creation.
+- Added the `AtlanConnectorType.get_connector_name()` method, which handles connection qualified name validation for assets and returns the connector name. Previously, this logic was repeated in most Asset `creator()` methods, which sometimes resulted in the `connector_name` field being mistakenly omitted (this bug was found in the `File` asset).
+
+### QOL improvements
+
+- Added data mesh integration tests.
+- Added a fallback delete mechanism for API tokens in tests.
+- Generated the latest typedef models, such as `Cognos`, `Stakeholder`, etc.
+
+## 2.2.0 (May 15, 2024)
+
+### Breaking changes
+
+- Fixes typos and docstrings in IAM role methods of the `DynamoDB` and `PostgreSQL` crawlers. Previously, the method name was `iam_user_role_auth` instead of `iam_role_auth`.
+
+## 2.1.9 (May 14, 2024)
+
+### New features
+
+- Added support for `BigQuery`, `DynamoDB` and `Postgres` crawlers.
+
+### Bug fixes
+
+- Fixed logic in the `Referenceable` model to determine the correct subtype.
+
+### QOL improvements
+
+- Utilized generated atlas core enums in the import template.
+- Added a shell script (`pyatlan-formatter`) capable of handling code formatting for both tracked and untracked files.
+
+## 2.1.8 (May 8, 2024)
+
+### New features
+
+- Added support for `Snowflake Miner`.
+- Introduced new connector types: `COGNITE`, `SYNDIGO`, `NETEZZA`, and `AZURE_SERVICE_BUS`.
+- Added an optional `depth` field to indicate the asset's depth within lineage in the `Referenceable` model.
+- Added an optional parameter (`related_attributes`) to the `get_hierarchy()` method, allowing users to specify a list of attributes to retrieve for each related asset in the hierarchy.
+- Expanded the functionality of the `WorkflowClient` with new methods for scheduling, stopping, and deleting workflows.
+
+### QOL improvements
+
+- Upgraded `jinja2` from `3.1.3` to `3.1.4` to address a security vulnerability: [GHSA-h75v-3vvj-5mfj](https://github.com/advisories/GHSA-h75v-3vvj-5mfj).
+
+## 2.1.7 (April 30, 2024)
+
+### New features
+
+- Adds `FileClient` for uploading and downloading files from Atlan's tenant object storage via presigned URLs.
+
+## 2.1.6 (April 23, 2024)
+
+### New features
+
+- Adds support for SSO group mapping.
+- Adds `AtlanSSO` to enumerate the options for supported Atlan's SSO providers.
+
+## 2.1.5 (April 18, 2024)
+
+### Bug fixes
+
+- Fixed an issue where explicit assignment of `None` to asset attributes in `BulkRequest` within the `client.asset.save()` method resulted in exclusion from the request payload.
+- Fixed issues with **multiple remove/append relationships** where values were being overwritten inside append/remove dictionaries.
+
+## 2.1.4 (April 16, 2024)
+
+### New features
+
+- Adds `AssetFilterGroup` enum for persona personalization.
+- Adds creator method to `AirflowDag` and `AirflowTask` assets.
+
+### Bug fixes
+
+- Fixes `qualified_name` population for related entities in `Glossary` objects.
+- Fixes logic for removing parent category relationship in `AtlasGlossaryCategory`.
+- Fixes lineage list performance by considering the `hasMore` attribute to optimize lineage paging.
+
+### QOL improvements
+
+- Updates `networkx >= 3.1` and bumped development requirements to the latest version.
+
 ## 2.1.3 (April 3, 2024)
 
 ### Bug fixes

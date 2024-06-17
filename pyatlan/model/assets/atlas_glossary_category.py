@@ -29,12 +29,17 @@ class AtlasGlossaryCategory(Asset, type_name="AtlasGlossaryCategory"):
 
     @root_validator()
     def _set_qualified_name_fallback(cls, values):
-        if (
-            "attributes" in values
-            and values["attributes"]
-            and not values["attributes"].qualified_name
-        ):
-            values["attributes"].qualified_name = values["guid"]
+        guid = values.get("guid")
+        attributes = values.get("attributes")
+        unique_attributes = values.get("unique_attributes")
+        if attributes and not attributes.qualified_name:
+            # If the qualified name is present inside
+            # unique attributes (in case of a related entity)
+            # Otherwise, set the qualified name to the GUID
+            # to avoid collisions when creating glossary object
+            attributes.qualified_name = (
+                unique_attributes and unique_attributes.get("qualifiedName")
+            ) or guid
         return values
 
     @classmethod
@@ -73,9 +78,11 @@ class AtlasGlossaryCategory(Asset, type_name="AtlasGlossaryCategory"):
         return cls.creator(name=name, anchor=anchor, parent_category=parent_category)
 
     def trim_to_required(self) -> AtlasGlossaryCategory:
+        # The backend raises an exception unless the `glossary_guid` is provided.
+        # Providing the `glossary_qualified_name` won't work
         if self.anchor is None or not self.anchor.guid:
             raise ValueError("anchor.guid must be available")
-        return self.create_for_modification(
+        return self.updater(
             qualified_name=self.qualified_name or "",
             name=self.name or "",
             glossary_guid=self.anchor.guid,
@@ -92,8 +99,7 @@ class AtlasGlossaryCategory(Asset, type_name="AtlasGlossaryCategory"):
             ["name", "qualified_name", "glossary_guid"],
             [name, qualified_name, glossary_guid],
         )
-        glossary = AtlasGlossary()
-        glossary.guid = glossary_guid
+        glossary = AtlasGlossary.ref_by_guid(glossary_guid)
         return cls(
             attributes=cls.Attributes(
                 qualified_name=qualified_name, name=name, anchor=glossary
@@ -253,6 +259,8 @@ class AtlasGlossaryCategory(Asset, type_name="AtlasGlossaryCategory"):
     def parent_category(self, parent_category: Optional[AtlasGlossaryCategory]):
         if self.attributes is None:
             self.attributes = self.Attributes()
+        if not parent_category:
+            self.relationship_attributes = {"parentCategory": None}
         self.attributes.parent_category = parent_category
 
     @property

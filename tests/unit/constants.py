@@ -1,4 +1,19 @@
 from pyatlan.model.assets import AtlasGlossary
+from pyatlan.model.constants import (
+    AssetTypes,
+    DomainTypes,
+    EntityTypes,
+    GlossaryTypes,
+    OtherAssetTypes,
+)
+from pyatlan.model.enums import AtlanWorkflowPhase
+from pyatlan.model.workflow import (
+    ScheduleQueriesSearchRequest,
+    WorkflowMetadata,
+    WorkflowResponse,
+    WorkflowSchedule,
+    WorkflowSpec,
+)
 
 TEST_ASSET_CLIENT_METHODS = {
     "find_personas_by_name": [
@@ -234,6 +249,34 @@ TEST_ASSET_CLIENT_METHODS = {
         (["name", [123]], "glossary_name\n  str type expected"),
         (["name", None], "none is not an allowed value"),
     ],
+    "find_domain_by_name": [
+        (
+            [None, ["attributes"]],
+            "1 validation error for FindDomainByName\nname\n  none is not an allowed value",
+        ),
+        (
+            [" ", ["attributes"]],
+            "1 validation error for FindDomainByName\nname\n  ensure this value has at least 1 characters",
+        ),
+        (
+            ["test-domain", "attributes"],
+            "1 validation error for FindDomainByName\nattributes\n  value is not a valid list",
+        ),
+    ],
+    "find_product_by_name": [
+        (
+            [None, ["attributes"]],
+            "1 validation error for FindProductByName\nname\n  none is not an allowed value",
+        ),
+        (
+            [" ", ["attributes"]],
+            "1 validation error for FindProductByName\nname\n  ensure this value has at least 1 characters",
+        ),
+        (
+            ["test-product", "attributes"],
+            "1 validation error for FindProductByName\nattributes\n  value is not a valid list",
+        ),
+    ],
 }
 
 TEST_ADMIN_CLIENT_METHODS = {
@@ -435,7 +478,134 @@ TEST_USER_CLIENT_METHODS = {
     ],
 }
 
+TEST_FILE_CLIENT_METHODS = {
+    "generate_presigned_url": [
+        ([123], "request\n  value is not a valid dict"),
+        ([None], "none is not an allowed value"),
+    ],
+    "upload_file": [
+        ([[123], "file-path"], "presigned_url\n  str type expected"),
+        ([None, "file-path"], "none is not an allowed value"),
+        (
+            ["test-url", [123]],
+            "file_path\n  str type expected",
+        ),
+        (
+            ["test-url", None],
+            "none is not an allowed value",
+        ),
+    ],
+    "download_file": [
+        ([[123], "file-path"], "presigned_url\n  str type expected"),
+        ([None, "file-path"], "none is not an allowed value"),
+        (
+            ["test-url", [123]],
+            "file_path\n  str type expected",
+        ),
+        (
+            ["test-url", None],
+            "none is not an allowed value",
+        ),
+    ],
+}
+
+
+TEST_WORKFLOW_CLIENT_METHODS = {
+    "run": [
+        (["abc"], "value is not a valid dict"),
+        ([None], "none is not an allowed value"),
+    ],
+    "rerun": [
+        (["abc"], "value is not a valid enumeration member"),
+        ([None], "none is not an allowed value"),
+    ],
+    "update": [
+        (["abc"], "value is not a valid dict"),
+        ([None], "none is not an allowed value"),
+    ],
+    "find_by_type": [
+        (["abc"], "value is not a valid enumeration member"),
+        ([None], "none is not an allowed value"),
+    ],
+    "monitor": [
+        (["abc", "test-logger"], "value is not a valid dict"),
+        (
+            [
+                WorkflowResponse(metadata=WorkflowMetadata(), spec=WorkflowSpec()),
+                "test-logger",
+            ],
+            "instance of Logger expected",
+        ),
+        ([None, "test-logger"], "none is not an allowed value"),
+    ],
+    "get_runs": [
+        ([[123], AtlanWorkflowPhase.RUNNING, 123, 456], "str type expected"),
+        ([None, AtlanWorkflowPhase.RUNNING, 123, 456], "none is not an allowed value"),
+    ],
+    "stop": [
+        ([[123]], "str type expected"),
+        ([None], "none is not an allowed value"),
+    ],
+    "delete": [
+        ([[123]], "str type expected"),
+        ([None], "none is not an allowed value"),
+    ],
+    "add_schedule": [
+        (
+            [[123], WorkflowSchedule(timezone="atlan", cron_schedule="*")],
+            "value is not a valid dict",
+        ),
+        (
+            [[123], WorkflowSchedule(timezone="atlan", cron_schedule="*")],
+            "value is not a valid enumeration member",
+        ),
+        (
+            [None, WorkflowSchedule(timezone="atlan", cron_schedule="*")],
+            "none is not an allowed value",
+        ),
+    ],
+    "remove_schedule": [
+        ([[123]], "value is not a valid dict"),
+        ([[123]], "value is not a valid enumeration member"),
+        ([None], "none is not an allowed value"),
+    ],
+    "get_scheduled_run": [
+        ([[123]], "str type expected"),
+        ([None], "none is not an allowed value"),
+    ],
+    "find_schedule_query": [
+        ([[123], 10], "saved_query_id\n  str type expected"),
+        ([None, 10], "none is not an allowed value"),
+        (["test-query-id", [123]], "max_results\n  value is not a valid integer"),
+        (["test-query-id", None], "none is not an allowed value"),
+    ],
+    "re_run_schedule_query": [
+        ([[123]], "schedule_query_id\n  str type expected"),
+        ([None], "none is not an allowed value"),
+    ],
+    "find_schedule_query_between": [
+        ([[123], True], "value is not a valid dict"),
+        ([None, True], "none is not an allowed value"),
+        (
+            [ScheduleQueriesSearchRequest(start_date="start", end_date="end"), [123]],
+            "missed\n  value could not be parsed to a boolean",
+        ),
+        (
+            [ScheduleQueriesSearchRequest(start_date="start", end_date="end"), None],
+            "none is not an allowed value",
+        ),
+    ],
+    "update_owner": [
+        ([[123], 10], "workflow_name\n  str type expected"),
+        ([None, 10], "none is not an allowed value"),
+        (["test-workflow", [123]], "username\n  str type expected"),
+        (["test-workflow", None], "none is not an allowed value"),
+    ],
+}
+
 APPLICABLE_GLOSSARIES = "applicable_glossaries"
+
+APPLICABLE_DOMAINS = "applicable_domains"
 
 APPLICABLE_CONNECTIONS = "applicable_connections"
 
@@ -443,7 +613,9 @@ APPLICABLE_ENTITY_TYPES = "applicable_entity_types"
 
 APPLICABLE_OTHER_ASSET_TYPES = "applicable_other_asset_types"
 
-APLICABLE_GLOSSARY_TYPES = "applicable_glossary_types"
+APPLICABLE_GLOSSARY_TYPES = "applicable_glossary_types"
+
+APPLICABLE_DOMAIN_TYPES = "applicable_domain_types"
 
 APPLICABLE_ASSET_TYPES = "applicable_asset_types"
 
@@ -540,46 +712,56 @@ TEST_ATTRIBUTE_DEF_APPLICABLE_ASSET_TYPES = [
     (
         APPLICABLE_ASSET_TYPES,
         1,
-        r"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_asset_types should be Set\[str\]",
+        f"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_asset_types should be {AssetTypes}",
     ),
     (
         APPLICABLE_ASSET_TYPES,
         {"Bogus"},
-        r"ATLAN-PYTHON-400-051 {'Bogus'} is an invalid value for applicable_asset_types should be in ",
+        "ATLAN-PYTHON-400-051 {'Bogus'} is an invalid value for applicable_asset_types should be in ",
     ),
     (
-        APLICABLE_GLOSSARY_TYPES,
+        APPLICABLE_GLOSSARY_TYPES,
         1,
-        r"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_glossary_types should be Set\[str\]",
+        f"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_glossary_types should be {GlossaryTypes}",
     ),
     (
-        APLICABLE_GLOSSARY_TYPES,
+        APPLICABLE_GLOSSARY_TYPES,
         {"Bogus"},
-        r"ATLAN-PYTHON-400-051 {'Bogus'} is an invalid value for applicable_glossary_types should be in ",
+        "ATLAN-PYTHON-400-051 {'Bogus'} is an invalid value for applicable_glossary_types should be in ",
+    ),
+    (
+        APPLICABLE_DOMAIN_TYPES,
+        1,
+        f"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_domain_types should be {DomainTypes}",
+    ),
+    (
+        APPLICABLE_DOMAIN_TYPES,
+        {"Bogus"},
+        "ATLAN-PYTHON-400-051 {'Bogus'} is an invalid value for applicable_domain_types should be in ",
     ),
     (
         APPLICABLE_OTHER_ASSET_TYPES,
         1,
-        r"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_other_asset_types should be Set\[str\]",
+        f"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_other_asset_types should be {OtherAssetTypes}",
     ),
     (
         APPLICABLE_OTHER_ASSET_TYPES,
         {"Bogus"},
-        r"ATLAN-PYTHON-400-051 {'Bogus'} is an invalid value for applicable_other_asset_types should be in ",
+        "ATLAN-PYTHON-400-051 {'Bogus'} is an invalid value for applicable_other_asset_types should be in ",
     ),
     (
         APPLICABLE_ENTITY_TYPES,
         1,
-        r"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_entity_types should be Set\[str\]",
+        f"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_entity_types should be {EntityTypes}",
     ),
     (
         APPLICABLE_CONNECTIONS,
         1,
-        r"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_connections should be Set\[str\]",
+        "ATLAN-PYTHON-400-048 Invalid parameter type for applicable_connections should be Set[str]",
     ),
     (
         APPLICABLE_GLOSSARIES,
         1,
-        r"ATLAN-PYTHON-400-048 Invalid parameter type for applicable_glossaries should be Set\[str\]",
+        "ATLAN-PYTHON-400-048 Invalid parameter type for applicable_glossaries should be Set[str]",
     ),
 ]

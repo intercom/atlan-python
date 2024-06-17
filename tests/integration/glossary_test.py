@@ -3,7 +3,7 @@
 import itertools
 import logging
 from time import sleep
-from typing import Generator, Optional
+from typing import Generator, List, Optional, Union
 
 import pytest
 from pydantic.v1 import StrictStr
@@ -13,6 +13,7 @@ from pyatlan.client.atlan import AtlanClient
 from pyatlan.errors import InvalidRequestError, NotFoundError
 from pyatlan.model.assets import AtlasGlossary, AtlasGlossaryCategory, AtlasGlossaryTerm
 from pyatlan.model.enums import SaveSemantic
+from pyatlan.model.fields.atlan_fields import AtlanField
 from pyatlan.model.fluent_search import CompoundQuery, FluentSearch
 from pyatlan.model.search import DSL, IndexSearchRequest
 from tests.integration.client import TestId, delete_asset
@@ -46,10 +47,15 @@ def create_category(
 
 
 def create_term(
-    client: AtlanClient, name: str, glossary_guid: str
+    client: AtlanClient,
+    name: str,
+    glossary_guid: str,
+    categories: Optional[List[AtlasGlossaryCategory]] = None,
 ) -> AtlasGlossaryTerm:
     t = AtlasGlossaryTerm.create(
-        name=StrictStr(name), glossary_guid=StrictStr(glossary_guid)
+        name=StrictStr(name),
+        glossary_guid=StrictStr(glossary_guid),
+        categories=categories,
     )
     r = client.asset.save(t)
     return r.assets_created(AtlasGlossaryTerm)[0]
@@ -111,6 +117,25 @@ def mid1a_category(
     )
     yield c
     delete_asset(client, guid=c.guid, asset_type=AtlasGlossaryCategory)
+
+
+@pytest.fixture(scope="module")
+def mid1a_term(
+    client: AtlanClient,
+    hierarchy_glossary: AtlasGlossary,
+    mid1a_category: AtlasGlossaryCategory,
+) -> Generator[AtlasGlossaryTerm, None, None]:
+    assert mid1a_category.qualified_name
+    t = create_term(
+        client,
+        name=f"mid1a_{TERM_NAME1}",
+        glossary_guid=hierarchy_glossary.guid,
+        categories=[
+            AtlasGlossaryCategory.ref_by_qualified_name(mid1a_category.qualified_name)
+        ],
+    )
+    yield t
+    delete_asset(client, guid=t.guid, asset_type=AtlasGlossaryTerm)
 
 
 @pytest.fixture(scope="module")
@@ -555,13 +580,48 @@ def test_find_category_by_name(
     )
 
 
+def test_find_category_by_name_qn_guid_correctly_populated(
+    client: AtlanClient,
+    hierarchy_glossary: AtlasGlossary,
+    top1_category: AtlasGlossaryCategory,
+    top2_category: AtlasGlossaryCategory,
+    mid1a_category: AtlasGlossaryCategory,
+    mid1a_term: AtlasGlossaryTerm,
+    mid2a_category: AtlasGlossaryCategory,
+):
+    category = client.asset.find_category_by_name(
+        name=mid1a_category.name,
+        glossary_name=hierarchy_glossary.name,
+        attributes=["terms", "anchor", "parentCategory"],
+    )[0]
+
+    # Glossary
+    assert category.anchor
+    assert category.anchor.guid == hierarchy_glossary.guid
+    assert category.anchor.name == hierarchy_glossary.name
+    assert category.anchor.qualified_name == hierarchy_glossary.qualified_name
+
+    # Glossary category
+    assert category.parent_category
+    assert category.parent_category.guid == top1_category.guid
+    assert category.parent_category.name == top1_category.name
+    assert category.parent_category.qualified_name == top1_category.qualified_name
+
+    # Glossary term
+    assert category.terms and category.terms[0]
+    assert category.terms[0].guid == mid1a_term.guid
+    assert category.terms[0].name == mid1a_term.name
+    assert category.terms[0].qualified_name == mid1a_term.qualified_name
+
+
 def test_category_delete_by_guid_raises_error_invalid_request_error(
     client: AtlanClient, category: AtlasGlossaryCategory
 ):
     with pytest.raises(
         InvalidRequestError,
         match=f"ATLAN-PYTHON-400-052 Asset with guid: {category.guid} is an asset "
-        f"of type AtlasGlossaryCategory which does not support archiving",
+        "of type AtlasGlossaryCategory which does not support archiving. "
+        "Suggestion: Please use purge if you wish to remove assets of this type.",
     ):
         client.asset.delete_by_guid(guid=category.guid)
 
@@ -596,6 +656,16 @@ def test_find_term_by_name(
     )
 
 
+@pytest.mark.parametrize(
+    "attributes, related_attributes",
+    [
+        (AtlasGlossaryCategory.TERMS, AtlasGlossaryTerm.NAME),
+        (
+            AtlasGlossaryCategory.TERMS.atlan_field_name,
+            AtlasGlossaryTerm.NAME.atlan_field_name,
+        ),
+    ],
+)
 def test_hierarchy(
     client: AtlanClient,
     hierarchy_glossary: AtlasGlossary,
@@ -611,9 +681,15 @@ def test_hierarchy(
     leaf2ab_category: AtlasGlossaryCategory,
     mid2b_category: AtlasGlossaryCategory,
     leaf2ba_category: AtlasGlossaryCategory,
+    attributes: Union[AtlanField, str],
+    related_attributes: Union[AtlanField, str],
 ):
     sleep(10)
-    hierarchy = client.asset.get_hierarchy(glossary=hierarchy_glossary)
+    hierarchy = client.asset.get_hierarchy(
+        glossary=hierarchy_glossary,
+        attributes=[attributes],
+        related_attributes=[related_attributes],
+    )
 
     root_categories = hierarchy.root_categories
 
@@ -623,9 +699,15 @@ def test_hierarchy(
     assert root_categories[1].name
     assert "top" in root_categories[0].name
     assert "top" in root_categories[1].name
-
     assert hierarchy.get_category(top1_category.guid)
+    category_without_terms = hierarchy.get_category(top1_category.guid)
+    assert category_without_terms.terms is not None
+    assert 0 == len(category_without_terms.terms)
     assert hierarchy.get_category(mid1a_category.guid)
+    category_with_term = hierarchy.get_category(mid1a_category.guid)
+    assert category_with_term.terms
+    assert 1 == len(category_with_term.terms)
+    assert f"mid1a_{TERM_NAME1}" == category_with_term.terms[0].name
     assert hierarchy.get_category(leaf1aa_category.guid)
     assert hierarchy.get_category(leaf1ab_category.guid)
     assert hierarchy.get_category(mid1b_category.guid)
@@ -863,6 +945,64 @@ def test_remove_unrelated_relationship(
     EXPECTED_ERR = (
         "ATLAN-PYTHON-404-000 Server responded with ATLAS-409-00-0021: "
         "relationship AtlasGlossaryRelatedTerm does "
-        f"not exist between entities {term2.guid} and {term1.guid}"
+        f"not exist between entities {term2.guid} and {term1.guid}. "
+        "Suggestion: Check the details of the server's message to correct your request."
     )
     assert EXPECTED_ERR == str(err.value)
+
+
+def test_move_sub_category_to_category(
+    client: AtlanClient,
+    hierarchy_glossary: AtlasGlossary,
+    top1_category: AtlasGlossaryCategory,
+    top2_category: AtlasGlossaryCategory,
+    mid1a_category: AtlasGlossaryCategory,
+    mid2a_category: AtlasGlossaryCategory,
+):
+    sleep(10)
+    assert mid1a_category.name
+    assert hierarchy_glossary.guid
+    assert top1_category.qualified_name
+    assert top2_category.qualified_name
+    assert mid1a_category.qualified_name
+
+    hierarchy = client.asset.get_hierarchy(glossary=hierarchy_glossary)
+    root_categories = hierarchy.root_categories
+
+    assert len(root_categories) == 2
+    root_category_qns = (
+        root_categories[0].qualified_name,
+        root_categories[1].qualified_name,
+    )
+    assert top1_category.qualified_name in root_category_qns
+    assert top2_category.qualified_name in root_category_qns
+
+    mid1a_category = AtlasGlossaryCategory.updater(
+        name=mid1a_category.name,
+        qualified_name=mid1a_category.qualified_name,
+        glossary_guid=hierarchy_glossary.guid,
+    )
+    mid1a_category.parent_category = None
+    response = client.asset.save(mid1a_category)
+
+    if updated := response.assets_updated(asset_type=AtlasGlossaryCategory):
+        assert updated[0].name == mid1a_category.name
+        assert updated[0].qualified_name == mid1a_category.qualified_name
+    else:
+        pytest.fail(f"Failed to perform update on category: {mid1a_category.name}")
+
+    # Ensure that the sub-category 'mid1a_category'
+    # has been successfully moved to the root category
+    sleep(10)
+    hierarchy = client.asset.get_hierarchy(glossary=hierarchy_glossary)
+    root_categories = hierarchy.root_categories
+
+    assert len(root_categories) == 3
+    root_category_qns_updated = (
+        root_categories[0].qualified_name,
+        root_categories[1].qualified_name,
+        root_categories[2].qualified_name,
+    )
+    assert top1_category.qualified_name in root_category_qns_updated
+    assert top2_category.qualified_name in root_category_qns_updated
+    assert mid1a_category.qualified_name in root_category_qns_updated

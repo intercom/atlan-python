@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar, List, Optional
+from typing import ClassVar, List, Optional, overload
 from warnings import warn
 
 from pydantic.v1 import Field, validator
@@ -25,14 +25,41 @@ from .a_d_l_s import ADLS
 class ADLSContainer(ADLS):
     """Description"""
 
+    @overload
+    @classmethod
+    def creator(
+        cls,
+        *,
+        name: str,
+        adls_account_qualified_name: str,
+    ) -> ADLSContainer: ...
+
+    @overload
+    @classmethod
+    def creator(
+        cls,
+        *,
+        name: str,
+        adls_account_qualified_name: str,
+        connection_qualified_name: str,
+    ) -> ADLSContainer: ...
+
     @classmethod
     @init_guid
-    def creator(cls, *, name: str, adls_account_qualified_name: str) -> ADLSContainer:
+    def creator(
+        cls,
+        *,
+        name: str,
+        adls_account_qualified_name: str,
+        connection_qualified_name: Optional[str] = None,
+    ) -> ADLSContainer:
         validate_required_fields(
             ["name", "adls_account_qualified_name"], [name, adls_account_qualified_name]
         )
         attributes = ADLSContainer.Attributes.create(
-            name=name, adls_account_qualified_name=adls_account_qualified_name
+            name=name,
+            adls_account_qualified_name=adls_account_qualified_name,
+            connection_qualified_name=connection_qualified_name,
         )
         return cls(attributes=attributes)
 
@@ -257,32 +284,34 @@ class ADLSContainer(ADLS):
         @classmethod
         @init_guid
         def create(
-            cls, *, name: str, adls_account_qualified_name: str
+            cls,
+            *,
+            name: str,
+            adls_account_qualified_name: str,
+            connection_qualified_name: Optional[str] = None,
         ) -> ADLSContainer.Attributes:
             validate_required_fields(
                 ["name", "adls_account_qualified_name"],
                 [name, adls_account_qualified_name],
             )
-
-            # Split the adls_account_qualified_name to extract necessary information
-            fields = adls_account_qualified_name.split("/")
-            if len(fields) != 4:
-                raise ValueError("Invalid adls_account_qualified_name")
-
-            try:
-                connector_type = AtlanConnectorType(fields[1])  # type:ignore
-            except ValueError as e:
-                raise ValueError("Invalid adls_account_qualified_name") from e
+            if connection_qualified_name:
+                connector_name = AtlanConnectorType.get_connector_name(
+                    connection_qualified_name
+                )
+            else:
+                connection_qn, connector_name = AtlanConnectorType.get_connector_name(
+                    adls_account_qualified_name, "adls_account_qualified_name", 4
+                )
 
             return ADLSContainer.Attributes(
                 name=name,
-                adls_account_qualified_name=adls_account_qualified_name,
-                connection_qualified_name=f"{fields[0]}/{fields[1]}/{fields[2]}",
                 qualified_name=f"{adls_account_qualified_name}/{name}",
-                connector_name=connector_type.value,
                 adls_account=ADLSAccount.ref_by_qualified_name(
                     adls_account_qualified_name
                 ),
+                adls_account_qualified_name=adls_account_qualified_name,
+                connector_name=connector_name,
+                connection_qualified_name=connection_qualified_name or connection_qn,
             )
 
     attributes: ADLSContainer.Attributes = Field(

@@ -6,12 +6,17 @@ import pytest
 
 from pyatlan.errors import InvalidRequestError
 from pyatlan.model.packages import (
+    BigQueryCrawler,
     ConfluentKafkaCrawler,
+    ConnectionDelete,
     DbtCrawler,
+    DynamoDBCrawler,
     GlueCrawler,
+    PostgresCrawler,
     PowerBICrawler,
     SigmaCrawler,
     SnowflakeCrawler,
+    SnowflakeMiner,
     SQLServerCrawler,
     TableauCrawler,
 )
@@ -19,6 +24,9 @@ from pyatlan.model.packages import (
 PACKAGE_REQUESTS_DIR = Path(__file__).parent / "data" / "package_requests"
 SNOWFLAKE_BASIC = "snowflake_basic.json"
 SNOWFLAKE_KEYPAIR = "snowflake_keypair.json"
+SNOWFLAKE_MINER_DEFAULT = "snowflake_miner_default.json"
+SNOWFLAKE_MINER_SOURCE = "snowflake_miner_source.json"
+SNOWFLAKE_MINER_S3_OFFLINE = "snowflake_miner_s3_offline.json"
 GLUE_IAM_USER = "glue_iam_user.json"
 TABLEAU_BASIC = "tableau_basic.json"
 TABLEAU_ACCESS_TOKEN = "tableau_access_token.json"
@@ -29,6 +37,15 @@ DBT_CORE = "dbt_core.json"
 DBT_CLOUD = "dbt_cloud.json"
 SIGMA_API_TOKEN = "sigma_api_token.json"
 SQL_SERVER_BASIC = "sql_server_basic.json"
+BIG_QUERY_DIRECT = "big_query_direct.json"
+DYNAMO_DB_IAM_USER = "dynamo_db_iam_user.json"
+DYNAMO_DB_IAM_USER_ROLE = "dynamo_db_iam_user_role.json"
+POSTGRES_DIRECT_BASIC = "postgres_direct_basic.json"
+POSTGRES_DIRECT_IAM_USER = "postgres_direct_iam_user.json"
+POSTGRES_DIRECT_IAM_ROLE = "postgres_direct_iam_role.json"
+POSTGRES_S3_OFFLINE = "postgres_s3_offline.json"
+CONNECTION_DELETE_HARD = "connection_delete_hard.json"
+CONNECTION_DELETE_SOFT = "connection_delete_soft.json"
 
 
 class NonSerializable:
@@ -60,7 +77,8 @@ def mock_connection_guid():
         yield mock_random
 
 
-def test_snowflake_package(
+@pytest.fixture()
+def mock_package_env(
     mock_role_cache,
     mock_user_cache,
     mock_group_cache,
@@ -70,6 +88,31 @@ def test_snowflake_package(
     mock_role_cache.validate_idstrs
     mock_user_cache.validate_names
     mock_group_cache.validate_aliases
+
+
+def test_snowflake_package(mock_package_env):
+    snowflake_with_connection_default = (
+        SnowflakeCrawler(
+            connection_name="test-snowflake-basic-conn",
+            admin_roles=["admin-guid-1234"],
+        )
+        .information_schema(hostname="test-hostname")
+        .basic_auth(
+            username="test-user",
+            password="test-pass",
+            role="test-role",
+            warehouse="test-warehouse",
+        )
+        .include(assets={"test-include": ["test-asset-1", "test-asset-2"]})
+        .exclude(assets=None)
+        .lineage(True)
+        .tags(True)
+        .to_workflow()
+    )
+    request_json = loads(
+        snowflake_with_connection_default.json(by_alias=True, exclude_none=True)
+    )
+    assert request_json == load_json(SNOWFLAKE_BASIC)
 
     snowflake_basic_auth = (
         SnowflakeCrawler(
@@ -121,17 +164,7 @@ def test_snowflake_package(
     assert request_json == load_json(SNOWFLAKE_KEYPAIR)
 
 
-def test_glue_package(
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_connection_guid,
-    mock_get_epoch_timestamp,
-):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
+def test_glue_package(mock_package_env):
     glue_iam_user_auth = (
         GlueCrawler(
             connection_name="test-glue-conn",
@@ -152,17 +185,7 @@ def test_glue_package(
     assert request_json == load_json(GLUE_IAM_USER)
 
 
-def test_tableau_package(
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_connection_guid,
-    mock_get_epoch_timestamp,
-):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
+def test_tableau_package(mock_package_env):
     tableau_basic_auth = (
         TableauCrawler(
             connection_name="test-tableau-basic-conn",
@@ -210,17 +233,7 @@ def test_tableau_package(
     assert request_json == load_json(TABLEAU_ACCESS_TOKEN)
 
 
-def test_powerbi_package(
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_connection_guid,
-    mock_get_epoch_timestamp,
-):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
+def test_powerbi_package(mock_package_env):
     powerbi_delegated_user = (
         PowerBICrawler(
             connection_name="test-powerbi-du-conn",
@@ -266,17 +279,7 @@ def test_powerbi_package(
     assert request_json == load_json(POWEBI_SERVICE_PRINCIPAL)
 
 
-def test_confluent_kafka_package(
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_connection_guid,
-    mock_get_epoch_timestamp,
-):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
+def test_confluent_kafka_package(mock_package_env):
     conf_kafka_direct = (
         ConfluentKafkaCrawler(
             connection_name="test-conf-kafka-direct-conn",
@@ -295,17 +298,7 @@ def test_confluent_kafka_package(
     assert request_json == load_json(CONFLUENT_KAFKA_DIRECT)
 
 
-def test_dbt_package(
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_connection_guid,
-    mock_get_epoch_timestamp,
-):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
+def test_dbt_package(mock_package_env):
     dbt_core = (
         DbtCrawler(
             connection_name="test-dbt-core-conn",
@@ -349,17 +342,7 @@ def test_dbt_package(
     assert request_json == load_json(DBT_CLOUD)
 
 
-def test_sigma_package(
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_connection_guid,
-    mock_get_epoch_timestamp,
-):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
+def test_sigma_package(mock_package_env):
     sigma_api_token = (
         SigmaCrawler(
             connection_name="test-sigma-basic-conn",
@@ -377,17 +360,7 @@ def test_sigma_package(
     assert request_json == load_json(SIGMA_API_TOKEN)
 
 
-def test_sql_server_package(
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_connection_guid,
-    mock_get_epoch_timestamp,
-):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
+def test_sql_server_package(mock_package_env):
     sql_server_basic = (
         SQLServerCrawler(
             connection_name="test-sigma-basic-conn",
@@ -412,6 +385,215 @@ def test_sql_server_package(
     assert request_json == load_json(SQL_SERVER_BASIC)
 
 
+def test_snowflake_miner_package(mock_package_env):
+    # With default configuration
+    snowflake_miner_default = (
+        SnowflakeMiner(connection_qualified_name="default/snowflake/1234567890")
+        .direct(start_epoch=9876543210, database="TEST_SNOWFLAKE", schema="TEST_SCHEMA")
+        .exclude_users(users=["test-user-1", "test-user-2"])
+        .to_workflow()
+    )
+    request_json = loads(snowflake_miner_default.json(by_alias=True, exclude_none=True))
+    assert request_json == load_json(SNOWFLAKE_MINER_DEFAULT)
+
+    # With advanced configuration (source)
+    snowflake_miner_source = (
+        SnowflakeMiner(connection_qualified_name="default/snowflake/1234567890")
+        .direct(start_epoch=9876543210, database="TEST_SNOWFLAKE", schema="TEST_SCHEMA")
+        .exclude_users(users=["test-user-1", "test-user-2"])
+        .popularity_window(days=15)
+        .native_lineage(enabled=True)
+        .custom_config(config={"test": True, "feature": 1234})
+        .to_workflow()
+    )
+    request_json = loads(snowflake_miner_source.json(by_alias=True, exclude_none=True))
+    assert request_json == load_json(SNOWFLAKE_MINER_SOURCE)
+
+    # With advanced configuration (offline)
+    snowflake_miner_s3_offline = (
+        SnowflakeMiner(connection_qualified_name="default/snowflake/1234567890")
+        .s3(
+            s3_bucket="test-s3-bucket",
+            s3_prefix="test-s3-prefix",
+            s3_bucket_region="test-s3-bucket-region",
+            sql_query_key="TEST_QUERY",
+            default_database_key="TEST_SNOWFLAKE",
+            default_schema_key="TEST_SCHEMA",
+            session_id_key="TEST_SESSION_ID",
+        )
+        .popularity_window(days=15)
+        .native_lineage(enabled=True)
+        .custom_config(config={"test": True, "feature": 1234})
+        .to_workflow()
+    )
+    request_json = loads(
+        snowflake_miner_s3_offline.json(by_alias=True, exclude_none=True)
+    )
+    assert request_json == load_json(SNOWFLAKE_MINER_S3_OFFLINE)
+
+
+def test_big_query_package(mock_package_env):
+    big_query_direct = (
+        BigQueryCrawler(
+            connection_name="test-big-query-conn", admin_roles=["admin-guid-1234"]
+        )
+        .service_account_auth(
+            project_id="test-project-id",
+            service_account_json="test-account-json",
+            service_account_email="test@test.com",
+        )
+        .include(assets={"test-include": ["test-asset-1", "test-asset-2"]})
+        .exclude(assets=None)
+        .exclude_regex(regex=".*_TEST")
+        .custom_config(config={"test": True, "feature": 1234})
+        .to_workflow()
+    )
+    request_json = loads(big_query_direct.json(by_alias=True, exclude_none=True))
+    assert request_json == load_json(BIG_QUERY_DIRECT)
+
+
+def test_dynamo_db_package(mock_package_env):
+    dynamo_db_direct_iam_user = (
+        DynamoDBCrawler(
+            connection_name="test-dynamodb-conn", admin_roles=["admin-guid-1234"]
+        )
+        .direct(region="test-region")
+        .iam_user_auth(access_key="test-access-key", secret_key="test-secret-key")
+        .include_regex(regex=".*_TEST_INCLUDE")
+        .exclude_regex(regex=".*_TEST_EXCLUDE")
+        .to_workflow()
+    )
+    request_json = loads(
+        dynamo_db_direct_iam_user.json(by_alias=True, exclude_none=True)
+    )
+    assert request_json == load_json(DYNAMO_DB_IAM_USER)
+
+    dynamo_db_direct_iam_user_role = (
+        DynamoDBCrawler(
+            connection_name="test-dynamodb-conn", admin_roles=["admin-guid-1234"]
+        )
+        .direct(region="test-region")
+        .iam_role_auth(
+            arn="arn:aws:iam::123456789012:user/test", external_id="test-ext-id"
+        )
+        .include_regex(regex=".*_TEST_INCLUDE")
+        .exclude_regex(regex=".*_TEST_EXCLUDE")
+        .to_workflow()
+    )
+    request_json = loads(
+        dynamo_db_direct_iam_user_role.json(by_alias=True, exclude_none=True)
+    )
+    assert request_json == load_json(DYNAMO_DB_IAM_USER_ROLE)
+
+
+def test_postgres_package(mock_package_env):
+    postgres_direct_basic = (
+        PostgresCrawler(
+            connection_name="test-sdk-postgresql",
+            admin_roles=["admin-guid-1234"],
+        )
+        .direct(hostname="test.com", database="test-db")
+        .basic_auth(
+            username="test-user",
+            password="test-password",
+        )
+        .include(assets={"test-include": ["test-asset-1", "test-asset-2"]})
+        .exclude(assets=None)
+        .exclude_regex(regex=".*_TEST")
+        .source_level_filtering(enable=True)
+        .jdbc_internal_methods(enable=True)
+        .to_workflow()
+    )
+
+    request_json = loads(postgres_direct_basic.json(by_alias=True, exclude_none=True))
+    assert request_json == load_json(POSTGRES_DIRECT_BASIC)
+
+    postgres_direct_iam_user = (
+        PostgresCrawler(
+            connection_name="test-sdk-postgresql",
+            admin_roles=["admin-guid-1234"],
+        )
+        .direct(hostname="test.com", database="test-db")
+        .iam_user_auth(
+            username="test-user",
+            access_key="test-access-key",
+            secret_key="test-secret-key",
+        )
+        .include(assets={"test-include": ["test-asset-1", "test-asset-2"]})
+        .exclude(assets=None)
+        .exclude_regex(regex=".*_TEST")
+        .source_level_filtering(enable=True)
+        .jdbc_internal_methods(enable=True)
+        .to_workflow()
+    )
+
+    request_json = loads(
+        postgres_direct_iam_user.json(by_alias=True, exclude_none=True)
+    )
+    assert request_json == load_json(POSTGRES_DIRECT_IAM_USER)
+
+    postgres_direct_iam_role = (
+        PostgresCrawler(
+            connection_name="test-sdk-postgresql",
+            admin_roles=["admin-guid-1234"],
+        )
+        .direct(hostname="test.com", database="test-db")
+        .iam_role_auth(
+            username="test-user",
+            arn="arn:aws:iam::123456789012:user/test",
+            external_id="test-ext-id",
+        )
+        .include(assets={"test-include": ["test-asset-1", "test-asset-2"]})
+        .exclude(assets=None)
+        .exclude_regex(regex=".*_TEST")
+        .source_level_filtering(enable=True)
+        .jdbc_internal_methods(enable=True)
+        .to_workflow()
+    )
+
+    request_json = loads(
+        postgres_direct_iam_role.json(by_alias=True, exclude_none=True)
+    )
+    assert request_json == load_json(POSTGRES_DIRECT_IAM_ROLE)
+
+    postgres_s3_offline = (
+        PostgresCrawler(
+            connection_name="test-sdk-postgresql",
+            admin_roles=["admin-guid-1234"],
+        )
+        .s3(
+            bucket_name="test-bucket",
+            bucket_prefix="test-prefix",
+            bucket_region="test-region",
+        )
+        .include(assets={"test-include": ["test-asset-1", "test-asset-2"]})
+        .exclude(assets=None)
+        .exclude_regex(regex=".*_TEST")
+        .source_level_filtering(enable=True)
+        .jdbc_internal_methods(enable=True)
+        .to_workflow()
+    )
+
+    request_json = loads(postgres_s3_offline.json(by_alias=True, exclude_none=True))
+    assert request_json == load_json(POSTGRES_S3_OFFLINE)
+
+
+def test_connection_delete_package(mock_package_env):
+    # With PURGE (hard delete)
+    connection_delete_hard = ConnectionDelete(
+        qualified_name="default/snowflake/1234567890", purge=True
+    ).to_workflow()
+    request_json = loads(connection_delete_hard.json(by_alias=True, exclude_none=True))
+    assert request_json == load_json(CONNECTION_DELETE_HARD)
+
+    # Without PURGE (soft delete)
+    connection_delete_soft = ConnectionDelete(
+        qualified_name="default/snowflake/1234567890", purge=False
+    ).to_workflow()
+    request_json = loads(connection_delete_soft.json(by_alias=True, exclude_none=True))
+    assert request_json == load_json(CONNECTION_DELETE_SOFT)
+
+
 @pytest.mark.parametrize(
     "test_assets",
     [
@@ -425,16 +607,8 @@ def test_sql_server_package(
     ],
 )
 def test_wrong_hierarchical_filter_raises_invalid_req_err(
-    test_assets,
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_get_epoch_timestamp,
+    test_assets, mock_package_env
 ):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
     with pytest.raises(
         InvalidRequestError,
         match=INVALID_REQ_ERROR,
@@ -451,17 +625,7 @@ def test_wrong_hierarchical_filter_raises_invalid_req_err(
     "test_projects",
     [[NonSerializable()], NonSerializable()],
 )
-def test_wrong_flat_filter_raises_invalid_req_err(
-    test_projects,
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_get_epoch_timestamp,
-):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
+def test_wrong_flat_filter_raises_invalid_req_err(test_projects, mock_package_env):
     with pytest.raises(
         InvalidRequestError,
         match=INVALID_REQ_ERROR,
@@ -479,16 +643,8 @@ def test_wrong_flat_filter_raises_invalid_req_err(
     [NonSerializable(), [NonSerializable()]],
 )
 def test_wrong_glue_package_filter_raises_invalid_req_err(
-    test_assets,
-    mock_role_cache,
-    mock_user_cache,
-    mock_group_cache,
-    mock_get_epoch_timestamp,
+    test_assets, mock_package_env
 ):
-    mock_role_cache.validate_idstrs
-    mock_user_cache.validate_names
-    mock_group_cache.validate_aliases
-
     with pytest.raises(
         InvalidRequestError,
         match=INVALID_REQ_ERROR,
